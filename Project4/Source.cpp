@@ -6,6 +6,7 @@
 // 4. Добавить прижок
 // 5. Добавить платформы
 // 
+// Добавить прозрачность
 // 6. Добавить колизию
 // 7. Добавить противника
 // 8. Добавить снаряд
@@ -25,7 +26,7 @@ struct
 	//определяет размер экрана в вашей сиситеме
 	int width = GetSystemMetrics(SM_CXSCREEN) - 200, height = GetSystemMetrics(SM_CYSCREEN) - 200;
 } window;
-
+POINT point;
 //обработка потока сообщений
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -114,14 +115,13 @@ void InitApp()
 //обновление приложения
 void UpdateApp()
 {
+	
+	GetCursorPos(&point);
 
 
 
 
-
-
-
-
+	int f = 1;
 
 
 
@@ -143,8 +143,11 @@ void UpdateKeyCode()
 void UpdateImage()
 {
 	BitBlt(window.dev_cont, 0, 0, window.width, window.height, window.contx, 0, 0, SRCCOPY);
+	ShowBitmap(window.contx, 0, 0, window.width, window.height, (HBITMAP)LoadImageA(NULL, "back1.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
 	//отрисовка заднего фона
-	ShowBitmap(window.contx, window.width/2, window.height / 2, 100, 100, (HBITMAP)LoadImageA(NULL, "back.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+	ShowBitmap(window.contx, point.x, point.y, 100, 100, (HBITMAP)LoadImageA(NULL, "back.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+
+
 }
 
 //вход в программу
