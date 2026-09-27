@@ -1,102 +1,174 @@
-#include <windows.h>
-#include <tchar.h>
+#include "Windows.h"
 
-// The main window class name.
-static TCHAR szWindowClass[] = _T("che_ugodno");
-
-// The string that appears in the application's title bar.
-static TCHAR szTitle[] = _T("Ablosulno_luboe");
-
-// Stored instance handle for use in Win32 API calls such as FindResource.
-HINSTANCE hInst;
-
-LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-
-int WINAPI WinMain(
-	_In_ HINSTANCE hInstance,
-	_In_opt_ HINSTANCE hPrevInstance,
-	_In_ LPSTR     lpCmdLine,
-	_In_ int       nCmdShow
-) 
+//стурктура где храняться данные о windows окне
+struct
 {
-	WNDCLASSEX wcex;
-
-	wcex.cbSize = sizeof(WNDCLASSEX);
-	wcex.style = CS_HREDRAW | CS_VREDRAW;
-	wcex.lpfnWndProc = WndProc;
-	wcex.cbClsExtra = 0;
-	wcex.cbWndExtra = 0;
-	wcex.hInstance = hInstance;
-	wcex.hIcon = LoadIcon(wcex.hInstance, IDI_APPLICATION);
-	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-	wcex.lpszMenuName = NULL;
-	wcex.lpszClassName = szWindowClass;
-	wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_APPLICATION);
-
-	if (!RegisterClassEx(&wcex))
-	{
-		MessageBox(NULL,
-			_T("Call to RegisterClassEx failed!"),
-			_T("Windows Desktop Guided Tour"),
-			NULL);
-
-		return 1;
-	}
-	HWND hWnd = CreateWindowEx(
-		WS_EX_OVERLAPPEDWINDOW,
-		szWindowClass,
-		szTitle,
-		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT,
-		500, 500,
-		NULL,
-		NULL,
-		hInstance,
-		NULL
-	);
-	if (!hWnd)
-	{
-		MessageBox(NULL,
-			_T("Call to CreateWindowEx failed!"),
-			_T("Windows Desktop Guided Tour"),
-			NULL);
-
-		return 1;
-	}
-
-	ShowWindow(hWnd,
-		nCmdShow);
-	UpdateWindow(hWnd);
-
+	//дескрипторы, контейнеры и буфферы для windows
+	RECT rc;
+	HINSTANCE hIns;
+	HWND hWnd;
+	HDC dev_cont, contx;
 	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0))
-	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
+	BOOL gbool = true;
 
-	return (int)msg.wParam;
-}
+	//определяет размер экрана в вашей сиситеме
+	int width = GetSystemMetrics(SM_CXSCREEN) - 200, height = GetSystemMetrics(SM_CYSCREEN) - 200;
+} window;
 
-LRESULT CALLBACK WndProc(
-	_In_ HWND   hWnd,
-	_In_ UINT   message,
-	_In_ WPARAM wParam,
-	_In_ LPARAM lParam
-)
+//обработка потока сообщений
+static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-
-	switch (message)
+	switch (msg)
 	{
-	case WM_DESTROY:
+	case WM_CLOSE:
 		PostQuitMessage(0);
 		break;
 	default:
-		return DefWindowProc(hWnd, message, wParam, lParam);
-		break;
+		return DefWindowProc(hWnd, msg, wParam, lParam);
+	}
+};
+
+//создания windows окна
+void InitWindow()
+{
+	//имя класса окна
+	const char* NameClass = "Window";
+
+	//размер окна
+	window.rc = { 0,0,window.width,window.height
+	};
+
+	//учет размера
+	AdjustWindowRect(&window.rc, WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, FALSE);
+
+	//дескриптор класса окна
+	WNDCLASSEX wc = { 0 };
+	wc.cbSize = sizeof(wc);
+	wc.lpszClassName = NameClass;
+	wc.hInstance = window.hIns;
+	wc.lpfnWndProc = &WindowProc;
+
+	//регистрация класса окна
+	auto NameClassId = RegisterClassEx(&wc);
+
+	//деструктор окна
+	window.hWnd = CreateWindowEx(
+		NULL,
+		MAKEINTATOM(NameClassId),
+		"practicum5",
+		WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		window.rc.right - window.rc.left,
+		window.rc.bottom - window.rc.top,
+		NULL,
+		NULL,
+		window.hIns,
+		NULL
+	);
+
+	//показ окна
+	ShowWindow(window.hWnd, SW_SHOW);
+}
+
+//отрисовка изображений .bmp
+void ShowBitmap(HDC hDC, int x, int y, int x1, int y1, HBITMAP hBitmapBall)
+{
+	HBITMAP hbm, hOldbm;
+	HDC hMemDC;
+	BITMAP bm;
+
+	hMemDC = CreateCompatibleDC(hDC);
+	hOldbm = (HBITMAP)SelectObject(hMemDC, hBitmapBall);
+
+	if (hOldbm)
+	{
+		GetObject(hBitmapBall, sizeof(BITMAP), (LPSTR)&bm);
+		StretchBlt(hDC, x, y, x1, y1, hMemDC, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY);
+		SelectObject(hMemDC, hOldbm);
 	}
 
-	return 0;
+	DeleteDC(hMemDC);
+}
 
+//загрузка модулей приложения
+void InitApp()
+{
+	//создание и иниализация контекста устройсва и девайс устройства
+	window.dev_cont = GetDC(window.hWnd);
+	window.contx = CreateCompatibleDC(window.dev_cont);
+	SelectObject(window.contx, CreateCompatibleBitmap(window.dev_cont, window.width, window.height));
+}
+
+//обновление приложения
+void UpdateApp()
+{
+
+
+
+
+
+
+
+
+
+
+
+}
+
+//обработка команд устройств ввода
+void UpdateKeyCode()
+{
+	//выход из приложения на ESC
+	if (GetAsyncKeyState(VK_ESCAPE))
+	{
+		window.msg.message = WM_QUIT;
+	}
+
+
+}
+
+//обновление изображений
+void UpdateImage()
+{
+	BitBlt(window.dev_cont, 0, 0, window.width, window.height, window.contx, 0, 0, SRCCOPY);
+	//отрисовка заднего фона
+	ShowBitmap(window.contx, window.width/2, window.height / 2, 100, 100, (HBITMAP)LoadImageA(NULL, "back.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+}
+
+//вход в программу
+int CALLBACK WinMain(
+	HINSTANCE hInstance,
+	HINSTANCE hPrevInstance,
+	LPSTR lpCmdLine,
+	int nShowCmd)
+{
+	InitWindow();
+	InitApp();
+
+	//основной цикл обновления приложения
+	while (window.gbool)
+	{
+		//обработка соощений для окна
+		while (PeekMessage(&window.msg, NULL, 0, 0, PM_REMOVE))
+		{
+			UpdateKeyCode();
+
+			//отбработка сообщений
+			if (window.msg.message == WM_QUIT)
+			{
+				window.gbool = false;
+				break;
+			}
+			TranslateMessage(&window.msg);
+			DispatchMessage(&window.msg);
+		}
+
+		UpdateImage();
+		UpdateApp();
+
+		//задержка обновления
+		Sleep(16);
+	}
+	return 0;
 }
